@@ -1,0 +1,59 @@
+import os
+import json
+from playwright.sync_api import sync_playwright
+
+def update_profile():
+    # Load cookies from environment variable
+    cookies_raw = os.environ.get("NAUKRI_COOKIES")
+    if not cookies_raw:
+        raise ValueError("NAUKRI_COOKIES environment variable is missing!")
+    
+    cookies = json.loads(cookies_raw)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        
+        # Add the saved session cookies to bypass login
+        context.add_cookies(cookies)
+        page = context.new_page()
+        
+        print("Navigating to Naukri profile...")
+        page.goto("https://www.naukri.com/mnjuser/profile", wait_until="domcontentloaded")
+        
+        # Verify if login was successful via cookies
+        if "login" in page.url:
+            raise Exception("Session expired! Cookies are invalid or expired. Please re-export fresh cookies.")
+
+        try:
+            print("Editing resume headline...")
+            # Click Edit button for Resume Headline
+            headline_edit_btn = page.locator("span.edit:has-text('Edit')").first
+            headline_edit_btn.click()
+            page.wait_for_selector("#resumeHeadlineTxt", timeout=5000)
+
+            textarea = page.locator("#resumeHeadlineTxt")
+            current_text = textarea.input_value().strip()
+
+            # Toggle trailing period to register a profile update
+            if current_text.endswith("."):
+                new_text = current_text[:-1]
+            else:
+                new_text = current_text + "."
+
+            textarea.fill(new_text)
+            
+            # Click Save
+            page.locator("button:has-text('Save')").click()
+            page.wait_for_timeout(3000)
+            print("Successfully updated Naukri profile headline!")
+            *Verification:* Profile update confirmation element or success toast rendered on page.
+
+        except Exception as e:
+            print(f"Failed to update headline: {e}")
+            raise e
+        finally:
+            browser.close()
+
+if __name__ == "__main__":
+    update_profile()
