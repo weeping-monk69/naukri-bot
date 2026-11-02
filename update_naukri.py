@@ -42,7 +42,6 @@ def update_profile():
     cookies = parse_cookies(cookies_raw)
 
     with sync_playwright() as p:
-        # Use real Chrome in non-headless mode (rendered via xvfb virtual screen)
         browser = p.chromium.launch(
             channel="chrome",
             headless=False,
@@ -67,7 +66,6 @@ def update_profile():
         print(f"Page Title: {page.title()}")
         
         if "login" in page.url.lower() or "access denied" in page.title().lower():
-            print("Page snippet:", page.content()[:500])
             raise Exception("Blocked by firewall or redirected to login!")
 
         try:
@@ -87,8 +85,12 @@ def update_profile():
 
             textarea.fill(new_text)
             
-            save_btn = page.locator("button.btn-dark-ot:has-text('Save'), form[name='resumeHeadlineForm'] button[type='submit'], button:has-text('Save')").first
+            print("Saving resume headline...")
+            # Precisely target the Save button inside the resume headline form only
+            save_btn = page.locator("form:has(#resumeHeadlineTxt) button:has-text('Save')").first
+            save_btn.wait_for(state="visible", timeout=5000)
             save_btn.click()
+            
             page.wait_for_timeout(3000)
             print("Successfully updated Naukri profile headline!")
 
