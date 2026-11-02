@@ -42,28 +42,26 @@ def update_profile():
     cookies = parse_cookies(cookies_raw)
 
     with sync_playwright() as p:
+        # Use real Chrome in non-headless mode (rendered via xvfb virtual screen)
         browser = p.chromium.launch(
-            headless=True,
+            channel="chrome",
+            headless=False,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
-                "--disable-dev-shm-usage"
+                "--disable-dev-shm-usage",
+                "--window-size=1366,768"
             ]
         )
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            viewport={"width": 1366, "height": 768}
-        )
-        
+        context = browser.new_context(viewport={"width": 1366, "height": 768})
         context.add_cookies(cookies)
         page = context.new_page()
         
-        # Hide webdriver property
         page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
         print("Navigating to Naukri profile...")
-        page.goto("https://www.naukri.com/mnjuser/profile", wait_until="networkidle", timeout=60000)
-        page.wait_for_timeout(5000)
+        page.goto("https://www.naukri.com/mnjuser/profile", wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(6000)
         
         print(f"Loaded URL: {page.url}")
         print(f"Page Title: {page.title()}")
@@ -74,8 +72,7 @@ def update_profile():
 
         try:
             print("Looking for Resume Headline edit button...")
-            # Try multiple selectors that Naukri uses for the Resume Headline edit icon
-            edit_btn = page.locator("#lazyResumeHead span.edit, .resumeHeadline span.edit, span.edit:has-text('editOneTheme')").first
+            edit_btn = page.locator("#lazyResumeHead span.edit, .resumeHeadline span.edit, span.edit:has-text('Edit')").first
             edit_btn.wait_for(state="visible", timeout=15000)
             edit_btn.click()
             
@@ -97,7 +94,6 @@ def update_profile():
 
         except Exception as e:
             print(f"Failed to update headline: {e}")
-            print("Visible page text snippet:", page.locator("body").inner_text()[:600])
             raise e
         finally:
             browser.close()
