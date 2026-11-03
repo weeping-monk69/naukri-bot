@@ -3,10 +3,10 @@ name: Naukri Auto Updater
 on:
   schedule:
     # Option 1 (Active): Runs every 3 hours at :53 IST (5:53 AM, 8:53 AM, 11:53 AM, 2:53 PM, 5:53 PM, 8:53 PM, 11:53 PM, 2:53 AM)
-   # - cron: '23 */3 * * *'
+    - cron: '23 */3 * * *'
     
     # Option 2 (Safer Daytime-Only): Uncomment below and comment out Option 1 to run only at 8:53 AM, 11:53 AM, 2:53 PM, and 5:53 PM IST
-     - cron: '23 3,6,9,12 * * *'
+    # - cron: '23 3,6,9,12 * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
